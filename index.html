@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Genesis Art: Voice Edition</title>
+    <style>
+        body { font-family: sans-serif; background: #1a1a1a; color: #eee; text-align: center; padding: 20px; }
+        button { 
+            padding: 15px 30px; font-size: 1.2rem; cursor: pointer; 
+            background: #e94e77; color: white; border: none; border-radius: 50px; 
+            box-shadow: 0 4px 15px rgba(233, 78, 119, 0.4); transition: 0.2s;
+        }
+        button:hover { transform: scale(1.05); background: #d63d66; }
+        button:disabled { background: #555; cursor: not-allowed; transform: none; }
+        
+        #status { margin: 20px; font-style: italic; color: #aaa; height: 1.2em; }
+        #canvas-container { margin-top: 20px; }
+        img { border: 4px solid #333; max-width: 100%; border-radius: 4px; }
+    </style>
+</head>
+<body>
+
+    <h1>Genesis Art</h1>
+    <p>Click the button and speak your world into existence.</p>
+    
+    <button id="record-btn">🎙️ Speak Creation</button>
+    <div id="status">Waiting...</div>
+
+    <div id="canvas-container">
+        <img id="art-display" src="" style="display:none;" />
+    </div>
+
+    <script>
+        const btn = document.getElementById('record-btn');
+        const status = document.getElementById('status');
+        const imgElement = document.getElementById('art-display');
+
+        // Setup Voice Recognition
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        const recognition = new SpeechRecognition();
+        
+        recognition.onstart = () => {
+            status.textContent = "Listening... (Speak now)";
+            btn.textContent = "👂 Listening...";
+        };
+
+        recognition.onspeechend = () => {
+            status.textContent = "Processing speech...";
+            recognition.stop();
+        };
+
+        recognition.onresult = async (event) => {
+            const transcript = event.results[0][0].transcript;
+            status.textContent = `You said: "${transcript}" - Sending to AI...`;
+            
+            // Send to Python
+            await generateArt(transcript);
+        };
+
+        btn.addEventListener('click', () => {
+            recognition.start();
+        });
+
+        async function generateArt(promptText) {
+            try {
+                // Call Python with the voice text
+                const response = await fetch(`http://127.0.0.1:8000/generate?prompt=${encodeURIComponent(promptText)}`);
+                const blob = await response.blob();
+                
+                const imageUrl = URL.createObjectURL(blob);
+                imgElement.src = imageUrl;
+                imgElement.style.display = 'inline-block';
+                status.textContent = "Creation Complete.";
+            } catch (error) {
+                console.error(error);
+                status.textContent = "Error connecting to engine.";
+            } finally {
+                btn.textContent = "🎙️ Speak Creation";
+            }
+        }
+    </script>
+</body>
+</html>
